@@ -66,13 +66,20 @@
   -webkit-touch-callout:none !important;
   -webkit-tap-highlight-color:transparent !important;
 }
-html,body,#wrap,#game,canvas,#controls,.pad,.btn,#attack,#msg,#tv,#tvbox,#start,#startCard{
+html,body,#wrap,#game,canvas,#controls,.pad,.btn,#attack,#msg,#tv,#tvbox{
   -webkit-user-select:none !important;
   user-select:none !important;
   -webkit-touch-callout:none !important;
   touch-action:none !important;
 }
 
+
+#go,#restartBtn{
+  touch-action:manipulation !important;
+  pointer-events:auto !important;
+  -webkit-user-select:none !important;
+  user-select:none !important;
+}
 </style>
 </head>
 <body>
@@ -90,7 +97,7 @@ html,body,#wrap,#game,canvas,#controls,.pad,.btn,#attack,#msg,#tv,#tvbox,#start,
     <div id="start">
       <div id="startCard">
         <h1>おかん、ちまちま。</h1>
-        <div style="font-weight:900">携帯で遊ぶ、どうでもいい系クソゲー v0.78</div>
+        <div style="font-weight:900">携帯で遊ぶ、どうでもいい系クソゲー v0.79</div>
         <p class="small">
           「おかん」を動かして、毎日のように増える<br>
           「ちまちま」した仕事を片付けよう。<br>
@@ -627,21 +634,16 @@ document.querySelectorAll('.btn,#attack,canvas').forEach(function(el){
 });
 
 
-// Android/Chrome系の長押し「コピー・検索・翻訳」をゲーム領域全体で抑止
-const gameRoot = document.getElementById('wrap');
-if(gameRoot){
-  gameRoot.addEventListener('pointerdown', function(e){
-    e.preventDefault();
-  }, {passive:false, capture:true});
 
-  gameRoot.addEventListener('touchstart', function(e){
-    e.preventDefault();
-  }, {passive:false, capture:true});
 
-  gameRoot.addEventListener('touchmove', function(e){
-    e.preventDefault();
-  }, {passive:false, capture:true});
-}
+// 長押しメニュー対策：ゲーム開始ボタンは妨げず、操作部分だけ抑止
+['canvas','.btn','#attack'].forEach(function(sel){
+  document.querySelectorAll(sel).forEach(function(el){
+    el.addEventListener('contextmenu', function(e){ e.preventDefault(); }, {passive:false});
+    el.addEventListener('selectstart', function(e){ e.preventDefault(); }, {passive:false});
+    el.addEventListener('dragstart', function(e){ e.preventDefault(); }, {passive:false});
+  });
+});
 
 </script>
 </body>
