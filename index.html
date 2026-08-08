@@ -97,7 +97,7 @@ html,body,#wrap,#game,canvas,#controls,.pad,.btn,#attack,#msg,#tv,#tvbox{
     <div id="start">
       <div id="startCard">
         <h1>おかん、ちまちま。</h1>
-        <div style="font-weight:900">携帯で遊ぶ、どうでもいい系クソゲー v0.82</div>
+        <div style="font-weight:900">携帯で遊ぶ、どうでもいい系クソゲー v0.83</div>
         <p class="small">
           「おかん」を動かして、毎日のように増える<br>
           「ちまちま」した仕事を片付けよう。<br>
@@ -177,9 +177,9 @@ function spawnEnemy(forceKind=null){
  // 上の階ほど、わたぼこりや「まぎらわしい物」が混ざる
  if(floor>=2 && !forceKind){
    const r=Math.random();
-   if(r<0.11 && dustCount()<2) k=enemyKinds.find(k=>k.dust);
-   else if(r<0.24) k=enemyKinds.find(k=>k.name==='電卓');
-   else if(r<0.32) k=enemyKinds.find(k=>k.name==='リモコン');
+   if(r<0.08 && dustCount()<2) k=enemyKinds.find(k=>k.dust);
+   else if(r<0.18) k=enemyKinds.find(k=>k.name==='電卓');
+   else if(r<0.26) k=enemyKinds.find(k=>k.name==='リモコン');
    else if(k.dust && dustCount()>=2){
      const normalPool=enemyKinds.filter(x=>!x.dust&&!x.trap);
      k=normalPool[(Math.random()*normalPool.length)|0];
@@ -420,21 +420,32 @@ function update(dt){
  }
 
  if(cleaned < target){
-   const interval = tvLock>0 ? 1.15 : 3.2;
-   const maxEnemies = tvLock>0 ? 11 : 7;
+   const normalPool=enemyKinds.filter(k=>!k.dust&&!k.trap);
 
-   // 残り1件なのに「わたぼこり・電卓・リモコン」だけになる事故を防ぐ。
-   if(target-cleaned<=1 && countableEnemyCount()===0){
-     const normalPool=enemyKinds.filter(k=>!k.dust&&!k.trap);
+   // 「倒すべき相手がいない時間」を作らない。
+   // 基本は普通のちまちまを最低2個、終盤でも最低1個は必ず置く。
+   const wantedNormal = (target-cleaned<=2) ? 1 : 2;
+   if(countableEnemyCount() < wantedNormal){
      spawnEnemy(normalPool[(Math.random()*normalPool.length)|0]);
      spawnTimer=0;
-   }else if(spawnTimer>interval && enemies.length<maxEnemies){
-     spawnTimer=0;
-     spawnEnemy();
+   }else{
+     // 通常補充も以前より早め。
+     const interval = tvLock>0 ? 0.95 : 1.9;
+     const maxEnemies = tvLock>0 ? 12 : 8;
+     if(spawnTimer>interval && enemies.length<maxEnemies){
+       spawnTimer=0;
+
+       // 追加補充は約65%を普通の仕事にして、
+       // わたぼこり・電卓・リモコンばかりにならないようにする。
+       if(Math.random()<0.65){
+         spawnEnemy(normalPool[(Math.random()*normalPool.length)|0]);
+       }else{
+         spawnEnemy();
+       }
+     }
    }
  } else if(!stairOpen){
    // 目標達成後は、わたぼこりや罠が残っていてもクリアを妨げない。
-   // 普通の「ちまちま」が消えたら階段を開ける。
    if(countableEnemyCount()===0) openStairs();
  }
 
