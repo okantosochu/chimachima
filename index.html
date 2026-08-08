@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+<meta name="theme-color" content="#151515" />
+<title>おかん、ちまちま。β</title>
+<style>
+  html,body{margin:0;background:#111;color:#fff;font-family:system-ui,-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;overflow:hidden;touch-action:none}
+  #wrap{position:fixed;inset:0;display:flex;flex-direction:column;background:#111;max-width:520px;margin:0 auto}
+  #top{height:42px;display:flex;align-items:center;justify-content:space-between;padding:0 9px;background:#0d0d0d;border-bottom:2px solid #333;font-weight:700;font-size:13px}
+  #game{flex:1;position:relative;min-height:0}
+  canvas{width:100%;height:100%;display:block;image-rendering:pixelated;background:#8c6239}
+  #msg{position:absolute;left:50%;top:16px;transform:translateX(-50%);background:#fff;color:#111;border:3px solid #111;border-radius:8px;padding:8px 12px;font-weight:800;max-width:78%;text-align:center;display:none;z-index:4}
+  #tv{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);display:none;z-index:5;pointer-events:none}
+  #tvbox{background:#f5e8c8;color:#111;border:4px solid #111;padding:10px 14px;border-radius:8px;text-align:center;width:min(76vw,360px);font-weight:800;box-shadow:0 5px 0 rgba(0,0,0,.25)}
+  #tvtitle{font-size:20px;margin-bottom:8px}
+  #tvline{font-size:18px}
+  #controls{height:142px;background:#d8c7a5;border-top:4px solid #5b4a32;display:flex;justify-content:space-between;align-items:center;padding:0 14px calc(env(safe-area-inset-bottom) + 6px);box-sizing:border-box}
+  .pad{width:116px;height:116px;position:relative;flex:0 0 116px}
+  .btn{position:absolute;width:39px;height:39px;background:#45413c;border:3px solid #24211e;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:900;color:#eee;box-shadow:inset 0 2px 0 #777,0 3px 0 #1e1c1a;user-select:none}
+  .up{left:39px;top:0}.down{left:39px;bottom:0}.left{left:0;top:39px}.right{right:0;top:39px}
+  #attack{width:150px;height:86px;border-radius:10px;background:#c94f44;color:#fff;border:4px solid #5d231f;box-shadow:inset 0 3px 0 #ee8b82,0 5px 0 #54201d;font-weight:1000;font-size:19px;text-align:center;display:flex;align-items:center;justify-content:center;line-height:1.15;user-select:none;text-shadow:1px 1px 0 #422;flex:0 0 150px}
+  #start{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#83c8e8;z-index:10;color:#111}
+  #startCard{width:min(86vw,430px);background:#fff3d2;border:5px solid #111;border-radius:10px;padding:20px;text-align:center}
+  #start h1{font-size:32px;margin:0 0 8px}.small{font-size:13px;line-height:1.55}
+  #go{margin-top:16px;background:#ffda58;border:4px solid #111;border-radius:8px;padding:12px 22px;font-size:20px;font-weight:900}
+  #restart{display:none;position:absolute;inset:0;background:rgba(0,0,0,.72);z-index:12;align-items:center;justify-content:center}
+  #restartCard{background:#fff;color:#111;border:5px solid #111;padding:22px;border-radius:10px;text-align:center;width:min(80vw,380px)}
+  #restartBtn{background:#ffda58;border:3px solid #111;padding:10px 18px;font-weight:900;font-size:18px}
+  #stress{letter-spacing:2px}
+
+  #rotateHint{display:none}
+  @media (orientation:landscape) and (max-height:520px){
+    #rotateHint{position:fixed;inset:0;z-index:50;background:#17120d;color:#fff;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;font-weight:900;font-size:22px}
+  }
+
+</style>
+</head>
+<body>
+<div id="rotateHint">このゲーム、縦でやってください。<br>横にすると遊んでるのバレるので。</div>
+<div id="wrap">
+  <div id="top">
+    <div><span id="floor">1F</span>　ちまちま回収 <span id="count">0/8</span></div>
+    <div>ストレス <span id="stress">♡♡♡</span></div>
+  </div>
+
+  <div id="game">
+    <canvas id="c"></canvas>
+    <div id="msg"></div>
+    <div id="tv"><div id="tvbox"><div id="tvtitle">📺 強制テレビタイム</div><div id="tvline"></div><div style="margin-top:8px;font-size:12px">おかんは動けません。ちまちまは増えます。</div></div></div>
+
+    <div id="start">
+      <div id="startCard">
+        <h1>おかん、ちまちま。</h1>
+        <div style="font-weight:900">携帯で遊ぶ、どうでもいい系クソゲー v0.7 縦専用</div>
+        <p class="small">
+          「おかん」を動かして、毎日のように増える<br>
+          「ちまちま」した仕事を片付けよう。<br>
+          片付けても片付けても、どんどん増える。<br>
+          <b>だって家事だもの。</b><br><br>
+          攻撃は <b>「なんでやねん！」</b>。<br>
+          テレビを取ると、強制的に寝転んでテレビを見ます。<br>
+          ぜんぶ片付けると階段が開きます。
+        </p>
+        <button id="go">ちまちま開始</button>
+      </div>
+    </div>
+
+    <div id="restart">
+      <div id="restartCard">
+        <h2 id="endTitle">おつかれさま、おかん。</h2>
+        <p id="endText">また散らかりました。</p>
+        <button id="restartBtn">もう1周する</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="controls">
+    <div class="pad">
+      <div class="btn up" data-d="up">▲</div>
+      <div class="btn down" data-d="down">▼</div>
+      <div class="btn left" data-d="left">◀</div>
+      <div class="btn right" data-d="right">▶</div>
+    </div>
+    <div id="attack">なんで<br>やねん！</div>
+  </div>
+</div>
+
+<script>
+const c=document.getElementById('c'), ctx=c.getContext('2d');
+const floorEl=document.getElementById('floor'), countEl=document.getElementById('count'), stressEl=document.getElementById('stress');
+const msg=document.getElementById('msg'), tv=document.getElementById('tv'), tvline=document.getElementById('tvline');
+const restart=document.getElementById('restart');
+
+let W=360,H=520,last=0,running=false, keys={};
+let floor=1, target=8, cleaned=0, stress=0, stairOpen=false, tvLock=0, spawnTimer=0;
+let player={x:180,y:300,r:15,dir:{x:1,y:0},speed:110};
+let enemies=[], bullets=[], particles=[], tvItem=null, stairs=null, dustRespawns=[];
+
+const enemyKinds=[
+ {name:'かたっぽ靴下',icon:'🧦',spd:22},
+ {name:'プリント',icon:'📄',spd:30},
+ {name:'食べこぼし',icon:'🍘',spd:18},
+ {name:'突然の弁当',icon:'🍱',spd:16},
+ {name:'通知',icon:'📱',spd:38},
+ {name:'買い忘れ',icon:'🛍️',spd:26},
+ {name:'わたぼこり',icon:'☁️',spd:14,dust:true},
+ {name:'電卓',icon:'🧮',spd:0,trap:true},
+ {name:'リモコン',icon:'🎛️',spd:0,trap:true}
+];
+
+function resize(){
+ const r=c.getBoundingClientRect(); const d=Math.max(1,Math.floor(devicePixelRatio||1));
+ c.width=Math.floor(r.width*d); c.height=Math.floor(r.height*d);
+ ctx.setTransform(d,0,0,d,0,0); W=r.width; H=r.height;
+}
+addEventListener('resize',resize);
+
+function rand(a,b){return a+Math.random()*(b-a)}
+function spawnEnemy(forceKind=null){
+ let pool = floor>=2 ? enemyKinds : enemyKinds.filter(k=>!k.dust&&!k.trap);
+ let k = forceKind || pool[(Math.random()*pool.length)|0];
+
+ // 上の階ほど、わたぼこりや「まぎらわしい物」が混ざる
+ if(floor>=2 && !forceKind){
+   const r=Math.random();
+   if(r<0.16) k=enemyKinds.find(k=>k.dust);
+   else if(r<0.24) k=enemyKinds.find(k=>k.name==='電卓');
+   else if(r<0.32) k=enemyKinds.find(k=>k.name==='リモコン');
+ }
+ let x=rand(25,W-25), y=rand(60,H-30);
+ if(Math.hypot(x-player.x,y-player.y)<90) x=(x+W/2)%W;
+ enemies.push({x,y,r:14,kind:k,phase:rand(0,6.28)});
+}
+function resetFloor(){
+ enemies=[]; bullets=[]; particles=[]; dustRespawns=[]; cleaned=0; stairOpen=false; stairs=null; tvItem=null;
+ target=10+floor*2;
+ player.x=W/2; player.y=H*.62; stress=Math.max(0,stress-1);
+ for(let i=0;i<Math.min(target,6+floor);i++)spawnEnemy();
+ spawnTimer=0;
+ updateHUD();
+ showMsg(`${floor}F　ちまちま開始！`);
+ setTimeout(()=>{ if(Math.random()<.92) tvItem={x:rand(45,W-45),y:rand(100,H-70),r:18}; },2500);
+}
+function updateHUD(){
+ floorEl.textContent=floor+'F';
+ countEl.textContent=`${cleaned}/${target}`;
+ stressEl.textContent=stress===0?'♡♡♡':stress===1?'♥♡♡':stress===2?'♥♥♡':'♥♥♥';
+
+ const a=document.getElementById('attack');
+ if(stress===0){
+   a.innerHTML='なんで<br>やねん！';
+   a.style.background='#c94f44';
+   a.style.color='#fff';
+   a.style.fontSize='19px';
+   a.style.transform='scale(1)';
+ }else if(stress===1){
+   a.innerHTML='今言う！？';
+   a.style.background='#e0be38';
+   a.style.color='#4a3700';
+   a.style.fontSize='22px';
+   a.style.transform='scale(1.03)';
+ }else if(stress===2){
+   a.innerHTML='知らんがな！';
+   a.style.background='#e8a12f';
+   a.style.color='#5a2200';
+   a.style.fontSize='25px';
+   a.style.transform='scale(1.06)';
+ }else{
+   a.innerHTML='もう<br>知らん！！';
+   a.style.background='#d73b2f';
+   a.style.color='#ffefef';
+   a.style.fontSize='29px';
+   a.style.transform='scale(1.10)';
+ }
+}
+function showMsg(t,ms=1200){msg.textContent=t;msg.style.display='block';clearTimeout(showMsg.t);showMsg.t=setTimeout(()=>msg.style.display='none',ms)}
+function attack(){
+ if(!running||tvLock>0)return;
+ let text='なんでやねん！';
+ if(stress===1) text='今言う！？';
+ if(stress===2) text='知らんがな！';
+ if(stress>=3) text='もう知らん！！';
+ const s=stress>=3?260:190;
+ const displayAngle = Math.abs(player.dir.x) >= Math.abs(player.dir.y)
+  ? 0
+  : (player.dir.y > 0 ? Math.PI/2 : -Math.PI/2);
+bullets.push({
+  x:player.x,y:player.y,
+  vx:player.dir.x*s,vy:player.dir.y*s,
+  angle:displayAngle,
+  life:.85,
+  r:stress>=3?22:(stress===2?17:(stress===1?14:12)),
+  text,
+  stressLevel:stress
+});
+}
+function hitTV(){
+ tvLock=3.6; tv.style.display='flex';
+ const lines=['冬ソナ再放送してるやん…','〇〇くん出てるドラマやん','この人、若い頃かっこよすぎ…','このCM、昔よう見たわ…','あと5分だけ…あと5分だけ…'];
+ tvline.textContent=lines[(Math.random()*lines.length)|0];
+ setTimeout(()=>{tv.style.display='none';showMsg('あっ…終わってた…');},3600);
+}
+function openStairs(){
+ stairOpen=true; stairs={x:W-52,y:72,w:40,h:42}; showMsg('階段がひらいた！');
+}
+function endGame(){
+ running=false; document.getElementById('endTitle').textContent='おつかれさま、おかん。';
+ document.getElementById('endText').textContent='最上階まで片付けました。……1Fに靴下が落ちています。';
+ restart.style.display='flex';
+}
+function collide(a,b){return Math.hypot(a.x-b.x,a.y-b.y)<a.r+b.r}
+function update(dt){
+ if(!running)return;
+
+ // テレビ中は「おかんだけ」操作不能。世界は止まらない。
+ if(tvLock>0) tvLock-=dt;
+
+ let dx=0,dy=0;
+ if(tvLock<=0){
+   if(keys.left)dx--; if(keys.right)dx++; if(keys.up)dy--; if(keys.down)dy++;
+   if(dx||dy){
+     const l=Math.hypot(dx,dy);dx/=l;dy/=l;
+     player.dir={x:dx,y:dy};
+     player.x+=dx*player.speed*dt;
+     player.y+=dy*player.speed*dt;
+   }
+ }
+ player.x=Math.max(20,Math.min(W-20,player.x)); player.y=Math.max(55,Math.min(H-22,player.y));
+
+ bullets.forEach(b=>{b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt});
+ bullets=bullets.filter(b=>b.life>0&&b.x>-40&&b.x<W+40&&b.y>20&&b.y<H+40);
+
+ enemies.forEach(e=>{
+   e.phase+=dt;
+   if(e.kind.trap) return;
+   const ang=Math.atan2(player.y-e.y,player.x-e.x);
+   const chase=e.kind.name==='通知'?1:.28;
+   const panicBoost=tvLock>0 ? 1.25 : 1;
+   e.x+=Math.cos(ang)*e.kind.spd*chase*panicBoost*dt + Math.cos(e.phase*2)*8*dt;
+   e.y+=Math.sin(ang)*e.kind.spd*chase*panicBoost*dt + Math.sin(e.phase*1.7)*8*dt;
+ });
+ for(let i=enemies.length-1;i>=0;i--){
+   let e=enemies[i];
+   for(let j=bullets.length-1;j>=0;j--){
+     if(Math.hypot(e.x-bullets[j].x,e.y-bullets[j].y)<e.r+bullets[j].r){
+       if(e.kind.name==='わたぼこり'){
+         // It disappears softly, but comes back soon. Annoying on purpose.
+         for(let q=0;q<7;q++){
+           particles.push({
+             x:e.x+rand(-5,5), y:e.y+rand(-5,5),
+             t:.75, dust:true, vx:rand(-18,18), vy:rand(-24,4)
+           });
+         }
+         dustRespawns.push({t:rand(1.7,2.8)});
+         enemies.splice(i,1);
+         bullets.splice(j,1);
+         break;
+       }
+
+       if(e.kind.trap){
+         // 「ちまちま」だと思って攻撃したら違う物だった。
+         particles.push({x:e.x,y:e.y,t:1.0,text:'間違えた・・・'});
+         stress=Math.min(3,stress+1);
+         updateHUD();
+         enemies.splice(i,1);
+         bullets.splice(j,1);
+         showMsg(e.kind.name+'やった…',900);
+         break;
+       }
+
+       let reaction='スッ';
+       if(e.kind.name==='突然の弁当') reaction='うまいやん';
+       else if(e.kind.name==='プリント') reaction='ごめんて…';
+       else if(e.kind.name==='かたっぽ靴下') reaction='相方どこ';
+       else if(e.kind.name==='通知') reaction='公式から';
+       else if(e.kind.name==='買い忘れ') reaction='今言う！？';
+       else if(e.kind.name==='食べこぼし') reaction='誰のやねん';
+       particles.push({x:e.x,y:e.y,t:.8,text:reaction});
+       enemies.splice(i,1); bullets.splice(j,1); cleaned++; updateHUD();
+       break;
+     }
+   }
+ }
+ enemies.forEach(e=>{
+   if(e.kind.trap) return;
+   if(tvLock>0) return;
+   if(collide(player,e)){
+     stress=Math.min(3,stress+1); updateHUD();
+     e.x=rand(20,W-20); e.y=rand(70,H-30);
+     if(e.kind.name==='通知') showMsg('ピコン！',700);
+     else if(e.kind.name==='わたぼこり') showMsg('またおる…',700);
+     else showMsg('ちまちま接触！',700);
+   }
+ });
+ if(tvItem&&collide(player,tvItem)){tvItem=null;hitTV()}
+ if(stairOpen&&stairs && player.x>stairs.x-8&&player.y<stairs.y+stairs.h+10){
+   if(floor>=3)endGame(); else {floor++; resetFloor();}
+ }
+ spawnTimer+=dt;
+
+ // Dust bunnies return quickly even after being dispersed.
+ for(let i=dustRespawns.length-1;i>=0;i--){
+   dustRespawns[i].t-=dt;
+   if(dustRespawns[i].t<=0){
+     dustRespawns.splice(i,1);
+     if(floor>=2 && !stairOpen) spawnEnemy(enemyKinds.find(k=>k.dust));
+   }
+ }
+
+ if(cleaned < target){
+   const interval = tvLock>0 ? 1.15 : 3.2;
+   const maxEnemies = tvLock>0 ? 11 : 7;
+   if(spawnTimer>interval && enemies.length<maxEnemies){
+     spawnTimer=0;
+     spawnEnemy();
+   }
+ } else if(!stairOpen && enemies.length===0 && dustRespawns.length===0){
+   openStairs();
+ }
+
+ particles.forEach(p=>{
+   p.t-=dt;
+   if(p.dust){
+     p.x+=p.vx*dt; p.y+=p.vy*dt;
+     p.vx*=.96; p.vy*=.96;
+   }
+ });
+ particles=particles.filter(p=>p.t>0);
+}
+
+function pxRect(x,y,w,h,fill,stroke='#111'){ctx.fillStyle=fill;ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=2;ctx.strokeRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h))}}
+function drawPlayer(){
+ const bodyColor=stress===0?'#fffdf5':stress===1?'#ffd95b':stress===2?'#ff9a42':'#ef4b2f';
+ ctx.save();ctx.translate(Math.round(player.x),Math.round(player.y));
+
+ // 背負い洗濯かご
+ ctx.fillStyle='#8d6338';ctx.strokeStyle='#2b2118';ctx.lineWidth=2;
+ ctx.fillRect(-27,-8,11,26);ctx.strokeRect(-27,-8,11,26);
+ ctx.fillStyle='#c89b59';ctx.fillRect(-25,-5,7,3);ctx.fillRect(-25,2,7,3);ctx.fillRect(-25,9,7,3);
+
+ // まんまる本体
+ ctx.fillStyle=bodyColor;ctx.strokeStyle='#181512';ctx.lineWidth=3;
+ ctx.beginPath();ctx.arc(0,0,21,0,Math.PI*2);ctx.fill();ctx.stroke();
+
+ // 小さい手足
+ ctx.beginPath();ctx.arc(-19,7,6,0,Math.PI*2);ctx.fill();ctx.stroke();
+ ctx.beginPath();ctx.arc(19,7,6,0,Math.PI*2);ctx.fill();ctx.stroke();
+ ctx.beginPath();ctx.arc(-11,19,6,0,Math.PI*2);ctx.fill();ctx.stroke();
+ ctx.beginPath();ctx.arc(11,19,6,0,Math.PI*2);ctx.fill();ctx.stroke();
+
+ // エプロン：首ひも→胸当て→裾。箱に見えないよう台形気味に。
+ ctx.strokeStyle='#8a604c';ctx.lineWidth=2;
+ ctx.beginPath();ctx.moveTo(-9,-3);ctx.lineTo(-12,3);ctx.moveTo(9,-3);ctx.lineTo(12,3);ctx.stroke();
+ ctx.fillStyle='#e8b29f';
+ ctx.beginPath();ctx.moveTo(-12,2);ctx.lineTo(12,2);ctx.lineTo(16,18);ctx.lineTo(-16,18);ctx.closePath();ctx.fill();ctx.stroke();
+ // ポケット
+ ctx.fillStyle='#f3c7b7';ctx.fillRect(-7,9,14,6);ctx.strokeRect(-7,9,14,6);
+
+ // 顔
+ ctx.fillStyle='#111';ctx.fillRect(-8,-6,3,3);ctx.fillRect(5,-6,3,3);
+ if(stress>=3){
+   // ドット絵で暑苦しい激怒顔
+   ctx.fillRect(-12,-12,9,3);ctx.fillRect(3,-12,9,3);
+   ctx.fillRect(-9,-8,5,2);ctx.fillRect(4,-8,5,2);
+   ctx.fillRect(-8,2,16,9);
+   ctx.fillStyle='#fff';ctx.fillRect(-5,3,10,2);
+ } else if(stress===2){
+   ctx.fillRect(-10,-10,7,2);ctx.fillRect(3,-10,7,2);
+   ctx.fillRect(-4,2,8,3);
+ } else if(stress===1){
+   ctx.fillRect(-4,1,8,2);
+ } else {
+   // 元のぬいぐるみ寄りの、にこっとした口
+   ctx.fillRect(-4,1,8,2);
+   ctx.fillRect(-2,3,4,1);
+ }
+ ctx.restore();
+}
+function draw(){
+ ctx.clearRect(0,0,W,H);
+
+ // 昭和っぽい居間：畳＋古い壁＋家具
+ ctx.fillStyle='#b89a63';ctx.fillRect(0,0,W,H);
+ ctx.strokeStyle='rgba(80,58,28,.25)';ctx.lineWidth=1;
+ for(let y=55;y<H;y+=44){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}
+ for(let x=0;x<W;x+=96){ctx.beginPath();ctx.moveTo(x,55);ctx.lineTo(x,H);ctx.stroke()}
+
+ // 壁際の家具
+ pxRect(8,60,58,50,'#6f4f2d');      // 茶箪笥
+ pxRect(W-92,60,76,42,'#6a4426');   // テレビ台
+ // 引き戸
+ pxRect(W/2-32,55,64,46,'#d6c6a5');
+ ctx.strokeStyle='#8b7655';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(W/2,55);ctx.lineTo(W/2,101);ctx.stroke();
+ ctx.fillStyle='#5d4a31';ctx.fillRect(W/2+18,76,3,3);
+
+ // ブラウン管テレビ（置物／罠）
+ if(tvItem){
+   ctx.save();ctx.translate(Math.round(tvItem.x),Math.round(tvItem.y));
+   pxRect(-19,-15,38,29,'#3a322c');
+   pxRect(-14,-10,26,17,'#514f46');
+   ctx.fillStyle='#111';ctx.fillRect(14,-5,3,3);ctx.fillRect(14,2,3,3);
+   ctx.strokeStyle='#2b241f';ctx.lineWidth=2;
+   ctx.beginPath();ctx.moveTo(-7,-16);ctx.lineTo(-14,-27);ctx.moveTo(6,-16);ctx.lineTo(14,-27);ctx.stroke();
+   ctx.restore();
+ }
+ enemies.forEach(e=>{
+   if(e.kind.name==='わたぼこり'){
+     ctx.save();
+     ctx.translate(Math.round(e.x),Math.round(e.y));
+     const puff='#ddd';
+     ctx.fillStyle=puff;
+     ctx.fillRect(-10,-5,8,8);
+     ctx.fillRect(-3,-9,10,10);
+     ctx.fillRect(5,-5,8,8);
+     ctx.fillRect(-5,2,12,7);
+     ctx.fillStyle='#999';
+     ctx.fillRect(-5,-1,2,2);
+     ctx.fillRect(4,-1,2,2);
+     ctx.restore();
+   } else if(e.kind.trap){
+     ctx.font='22px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+     ctx.fillText(e.kind.icon,e.x,e.y);
+   } else {
+     ctx.font='25px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(e.kind.icon,e.x,e.y);
+   }
+ });
+ bullets.forEach(b=>{
+   ctx.save();
+   ctx.translate(b.x,b.y);
+   ctx.rotate(b.angle);
+   const level=b.stressLevel||0;
+   const fs=level===0?11:(level===1?13:(level===2?15:18));
+   const boxH=level===0?20:(level===1?24:(level===2?28:34));
+   const fill=level===0?'#ffffff':(level===1?'#ffe45c':(level===2?'#ffad38':'#e84132'));
+   const textColor=level===0?'#111':(level===1?'#5c4500':(level===2?'#5f2200':'#fff'));
+   ctx.fillStyle=fill;ctx.strokeStyle='#111';ctx.lineWidth=2;
+   ctx.font=`900 ${fs}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+   let w=Math.max(50,ctx.measureText(b.text).width+14);
+   ctx.fillRect(-w/2,-boxH/2,w,boxH);
+   ctx.strokeRect(-w/2,-boxH/2,w,boxH);
+   ctx.fillStyle=textColor;ctx.fillText(b.text,0,0);
+   ctx.restore();
+ });
+ if(stairs){
+   pxRect(stairs.x,stairs.y,stairs.w,stairs.h,'#2b2118');ctx.fillStyle='#d6a75d';
+   for(let i=0;i<4;i++)ctx.fillRect(stairs.x+5+i*8,stairs.y+30-i*8,12,6);
+   ctx.fillStyle='#fff';ctx.font='900 12px sans-serif';ctx.fillText('↑',stairs.x+18,stairs.y+12);
+ }
+ particles.forEach(p=>{
+   ctx.save();
+   if(p.dust){
+     ctx.globalAlpha=Math.max(0,p.t/.75);
+     ctx.fillStyle='#e8e8e8';
+     ctx.fillRect(Math.round(p.x),Math.round(p.y),4,4);
+   } else {
+     ctx.font='900 14px sans-serif';
+     ctx.textAlign='center';
+     ctx.textBaseline='middle';
+     const yy=p.y-(.8-p.t)*20;
+     const w=ctx.measureText(p.text).width+10;
+     ctx.fillStyle='rgba(255,255,255,.92)';
+     ctx.fillRect(p.x-w/2,yy-10,w,20);
+     ctx.strokeStyle='#111';ctx.lineWidth=2;ctx.strokeRect(p.x-w/2,yy-10,w,20);
+     ctx.fillStyle='#111';ctx.fillText(p.text,p.x,yy);
+   }
+   ctx.restore();
+ });
+ drawPlayer();
+
+ if(tvLock>0){
+   // little lying-down hint
+   ctx.fillStyle='rgba(0,0,0,.1)';ctx.fillRect(0,0,W,H);
+ }
+}
+function loop(t){
+ let dt=Math.min(.033,(t-last)/1000||0);last=t;update(dt);draw();requestAnimationFrame(loop)
+}
+
+document.querySelectorAll('.btn').forEach(b=>{
+ const d=b.dataset.d;
+ const on=e=>{e.preventDefault();keys[d]=true};
+ const off=e=>{e.preventDefault();keys[d]=false};
+ b.addEventListener('pointerdown',on);b.addEventListener('pointerup',off);b.addEventListener('pointercancel',off);b.addEventListener('pointerleave',off);
+});
+document.getElementById('attack').addEventListener('pointerdown',e=>{e.preventDefault();attack()});
+addEventListener('keydown',e=>{
+ if(['ArrowLeft','a'].includes(e.key))keys.left=true;if(['ArrowRight','d'].includes(e.key))keys.right=true;
+ if(['ArrowUp','w'].includes(e.key))keys.up=true;if(['ArrowDown','s'].includes(e.key))keys.down=true;
+ if(e.key===' '||e.key==='Enter')attack();
+});
+addEventListener('keyup',e=>{
+ if(['ArrowLeft','a'].includes(e.key))keys.left=false;if(['ArrowRight','d'].includes(e.key))keys.right=false;
+ if(['ArrowUp','w'].includes(e.key))keys.up=false;if(['ArrowDown','s'].includes(e.key))keys.down=false;
+});
+document.getElementById('go').onclick=()=>{document.getElementById('start').style.display='none';running=true;floor=1;stress=0;resetFloor()};
+document.getElementById('restartBtn').onclick=()=>{restart.style.display='none';running=true;floor=1;stress=0;resetFloor()};
+resize();requestAnimationFrame(loop);
+</script>
+</body>
+</html>
