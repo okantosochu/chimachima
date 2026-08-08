@@ -18,7 +18,7 @@
   #tvline{font-size:18px}
   #controls{height:142px;background:#d8c7a5;border-top:4px solid #5b4a32;display:flex;justify-content:space-between;align-items:center;padding:0 14px calc(env(safe-area-inset-bottom) + 6px);box-sizing:border-box}
   .pad{width:138px;height:138px;position:relative;flex:0 0 138px}
-  .btn{position:absolute;width:39px;height:39px;background:#45413c;border:3px solid #24211e;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:900;color:#eee;box-shadow:inset 0 2px 0 #777,0 3px 0 #1e1c1a;user-select:none}
+  .btn{position:absolute;-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important;width:39px;height:39px;background:#45413c;border:3px solid #24211e;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:900;color:#eee;box-shadow:inset 0 2px 0 #777,0 3px 0 #1e1c1a;user-select:none}
   .up{left:49px;top:0}.down{left:49px;bottom:0}.left{left:0;top:49px}.right{right:0;top:49px}
   #attack{width:150px;height:86px;border-radius:10px;background:#c94f44;color:#fff;border:4px solid #5d231f;box-shadow:inset 0 3px 0 #ee8b82,0 5px 0 #54201d;font-weight:1000;font-size:19px;text-align:center;display:flex;align-items:center;justify-content:center;line-height:1.15;user-select:none;text-shadow:1px 1px 0 #422;flex:0 0 150px}
   #start{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#cdbb95;z-index:10;color:#111}
@@ -90,7 +90,7 @@ html,body,#wrap,#game,canvas,#controls,.pad,.btn,#attack,#msg,#tv,#tvbox,#start,
     <div id="start">
       <div id="startCard">
         <h1>おかん、ちまちま。</h1>
-        <div style="font-weight:900">携帯で遊ぶ、どうでもいい系クソゲー v0.76</div>
+        <div style="font-weight:900">携帯で遊ぶ、どうでもいい系クソゲー v0.77</div>
         <p class="small">
           「おかん」を動かして、毎日のように増える<br>
           「ちまちま」した仕事を片付けよう。<br>
@@ -143,8 +143,8 @@ const enemyKinds=[
  {name:'通知',icon:'📱',spd:38},
  {name:'買い忘れ',icon:'🛍️',spd:26},
  {name:'わたぼこり',icon:'☁️',spd:14,dust:true},
- {name:'電卓',icon:'🧮',spd:0,trap:true},
- {name:'リモコン',icon:'🎛️',spd:0,trap:true}
+ {name:'電卓',icon:'🧮',spd:18,trap:true},
+ {name:'リモコン',icon:'🎛️',spd:21,trap:true}
 ];
 
 function resize(){
@@ -271,10 +271,19 @@ function update(dt){
 
  enemies.forEach(e=>{
    e.phase+=dt;
-   if(e.kind.trap) return;
+   const panicBoost=tvLock>0 ? 1.25 : 1;
+
+   if(e.kind.trap){
+     // 電卓・リモコンは「ただそこにある」くせに、なぜかふらふら動く
+     e.x+=Math.cos(e.phase*1.35)*e.kind.spd*panicBoost*dt;
+     e.y+=Math.sin(e.phase*1.15)*e.kind.spd*panicBoost*dt;
+     e.x=Math.max(20,Math.min(W-20,e.x));
+     e.y=Math.max(65,Math.min(H-25,e.y));
+     return;
+   }
+
    const ang=Math.atan2(player.y-e.y,player.x-e.x);
    const chase=e.kind.name==='通知'?1:.28;
-   const panicBoost=tvLock>0 ? 1.25 : 1;
    e.x+=Math.cos(ang)*e.kind.spd*chase*panicBoost*dt + Math.cos(e.phase*2)*8*dt;
    e.y+=Math.sin(ang)*e.kind.spd*chase*panicBoost*dt + Math.sin(e.phase*1.7)*8*dt;
  });
@@ -298,12 +307,13 @@ function update(dt){
 
        if(e.kind.trap){
          // 「ちまちま」だと思って攻撃したら違う物だった。
-         particles.push({x:e.x,y:e.y,t:1.0,text:'間違えた・・・'});
+         const mistake = e.kind.name==='電卓' ? '電卓やん！！' : 'リモコンやん！！';
+         particles.push({x:e.x,y:e.y,t:1.05,text:mistake});
          stress=Math.min(3,stress+1);
          updateHUD();
          enemies.splice(i,1);
          bullets.splice(j,1);
-         showMsg(e.kind.name+'やった…',900);
+         showMsg('間違えた・・・',900);
          break;
        }
 
@@ -565,6 +575,23 @@ document.querySelectorAll('.btn,#attack,canvas').forEach(function(el){
     if(e.pointerType === 'touch') e.preventDefault();
   }, {passive:false});
 });
+
+
+// Android/Chrome系の長押し「コピー・検索・翻訳」をゲーム領域全体で抑止
+const gameRoot = document.getElementById('wrap');
+if(gameRoot){
+  gameRoot.addEventListener('pointerdown', function(e){
+    e.preventDefault();
+  }, {passive:false, capture:true});
+
+  gameRoot.addEventListener('touchstart', function(e){
+    e.preventDefault();
+  }, {passive:false, capture:true});
+
+  gameRoot.addEventListener('touchmove', function(e){
+    e.preventDefault();
+  }, {passive:false, capture:true});
+}
 
 </script>
 </body>
