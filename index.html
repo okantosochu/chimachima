@@ -97,7 +97,7 @@ html,body,#wrap,#game,canvas,#controls,.pad,.btn,#attack,#msg,#tv,#tvbox{
     <div id="start">
       <div id="startCard">
         <h1>おかん、ちまちま。</h1>
-        <div style="font-weight:900">携帯で遊ぶ、どうでもいい系クソゲー v0.80</div>
+        <div style="font-weight:900">携帯で遊ぶ、どうでもいい系クソゲー v0.81</div>
         <p class="small">
           「おかん」を動かして、毎日のように増える<br>
           「ちまちま」した仕事を片付けよう。<br>
@@ -162,6 +162,10 @@ function resize(){
 addEventListener('resize',resize);
 
 function rand(a,b){return a+Math.random()*(b-a)}
+function dustCount(){
+  return enemies.filter(e=>e.kind && e.kind.name==='わたぼこり').length;
+}
+
 function spawnEnemy(forceKind=null){
  let pool = floor>=2 ? enemyKinds : enemyKinds.filter(k=>!k.dust&&!k.trap);
  let k = forceKind || pool[(Math.random()*pool.length)|0];
@@ -169,9 +173,13 @@ function spawnEnemy(forceKind=null){
  // 上の階ほど、わたぼこりや「まぎらわしい物」が混ざる
  if(floor>=2 && !forceKind){
    const r=Math.random();
-   if(r<0.16) k=enemyKinds.find(k=>k.dust);
+   if(r<0.11 && dustCount()<2) k=enemyKinds.find(k=>k.dust);
    else if(r<0.24) k=enemyKinds.find(k=>k.name==='電卓');
    else if(r<0.32) k=enemyKinds.find(k=>k.name==='リモコン');
+   else if(k.dust && dustCount()>=2){
+     const normalPool=enemyKinds.filter(x=>!x.dust&&!x.trap);
+     k=normalPool[(Math.random()*normalPool.length)|0];
+   }
  }
  let x=rand(25,W-25), y=rand(60,H-30);
  if(Math.hypot(x-player.x,y-player.y)<90) x=(x+W/2)%W;
@@ -347,7 +355,7 @@ function update(dt){
              t:.75, dust:true, vx:rand(-18,18), vy:rand(-24,4)
            });
          }
-         dustRespawns.push({t:rand(1.7,2.8)});
+         dustRespawns.push({t:rand(5.0,8.0)});
          enemies.splice(i,1);
          bullets.splice(j,1);
          break;
@@ -399,7 +407,9 @@ function update(dt){
    dustRespawns[i].t-=dt;
    if(dustRespawns[i].t<=0){
      dustRespawns.splice(i,1);
-     if(floor>=2 && !stairOpen) spawnEnemy(enemyKinds.find(k=>k.dust));
+     if(floor>=2 && !stairOpen && dustCount()<2){
+       spawnEnemy(enemyKinds.find(k=>k.dust));
+     }
    }
  }
 
