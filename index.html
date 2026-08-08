@@ -90,7 +90,7 @@ html,body,#wrap,#game,canvas,#controls,.pad,.btn,#attack,#msg,#tv,#tvbox,#start,
     <div id="start">
       <div id="startCard">
         <h1>おかん、ちまちま。</h1>
-        <div style="font-weight:900">携帯で遊ぶ、どうでもいい系クソゲー v0.77</div>
+        <div style="font-weight:900">携帯で遊ぶ、どうでもいい系クソゲー v0.78</div>
         <p class="small">
           「おかん」を動かして、毎日のように増える<br>
           「ちまちま」した仕事を片付けよう。<br>
@@ -131,7 +131,7 @@ const msg=document.getElementById('msg'), tv=document.getElementById('tv'), tvli
 const restart=document.getElementById('restart');
 
 let W=360,H=520,last=0,running=false, keys={};
-let floor=1, target=8, cleaned=0, stress=0, stairOpen=false, tvLock=0, spawnTimer=0;
+let floor=1, target=8, cleaned=0, stress=0, stairOpen=false, tvLock=0, spawnTimer=0, rageTimer=0, exhaustTimer=0;
 let player={x:180,y:300,r:15,dir:{x:1,y:0},speed:110};
 let enemies=[], bullets=[], particles=[], tvItem=null, stairs=null, dustRespawns=[];
 
@@ -211,10 +211,36 @@ function updateHUD(){
    a.style.fontSize='29px';
    a.style.transform='scale(1.10)';
  }
+
+ if(rageTimer>0){
+   a.innerHTML='もう<br>知らん！！';
+ }else if(exhaustTimer>0){
+   a.innerHTML='……<br>むり';
+   a.style.background='#777';
+   a.style.color='#eee';
+   a.style.fontSize='24px';
+   a.style.transform='scale(.96)';
+ }
 }
 function showMsg(t,ms=1200){msg.textContent=t;msg.style.display='block';clearTimeout(showMsg.t);showMsg.t=setTimeout(()=>msg.style.display='none',ms)}
+function addStress(n=1){
+  if(rageTimer>0 || exhaustTimer>0) return;
+  const before=stress;
+  stress=Math.min(3,stress+n);
+  updateHUD();
+  if(before<3 && stress>=3){
+    rageTimer=5.0;
+    showMsg('もう知らん！！　無敵モード',1200);
+  }
+}
+function startExhaust(){
+  rageTimer=0;
+  exhaustTimer=3.0;
+  showMsg('……つかれた。',1400);
+}
+
 function attack(){
- if(!running||tvLock>0)return;
+ if(!running||tvLock>0||exhaustTimer>0)return;
  let text='なんでやねん！';
  if(stress===1) text='今言う！？';
  if(stress===2) text='知らんがな！';
@@ -254,8 +280,23 @@ function update(dt){
  // テレビ中は「おかんだけ」操作不能。世界は止まらない。
  if(tvLock>0) tvLock-=dt;
 
+ // 激おこ無敵は5秒。その後3秒へたりこむ。
+ if(rageTimer>0){
+   rageTimer-=dt;
+   if(rageTimer<=0) startExhaust();
+ }
+ if(exhaustTimer>0){
+   exhaustTimer-=dt;
+   if(exhaustTimer<=0){
+     exhaustTimer=0;
+     stress=0;
+     updateHUD();
+     showMsg('……さて、やるか。',1000);
+   }
+ }
+
  let dx=0,dy=0;
- if(tvLock<=0){
+ if(tvLock<=0 && exhaustTimer<=0){
    if(keys.left)dx--; if(keys.right)dx++; if(keys.up)dy--; if(keys.down)dy++;
    if(dx||dy){
      const l=Math.hypot(dx,dy);dx/=l;dy/=l;
@@ -309,8 +350,7 @@ function update(dt){
          // 「ちまちま」だと思って攻撃したら違う物だった。
          const mistake = e.kind.name==='電卓' ? '電卓やん！！' : 'リモコンやん！！';
          particles.push({x:e.x,y:e.y,t:1.05,text:mistake});
-         stress=Math.min(3,stress+1);
-         updateHUD();
+         addStress(1);
          enemies.splice(i,1);
          bullets.splice(j,1);
          showMsg('間違えた・・・',900);
@@ -332,9 +372,9 @@ function update(dt){
  }
  enemies.forEach(e=>{
    if(e.kind.trap) return;
-   if(tvLock>0) return;
+   if(tvLock>0 || rageTimer>0 || exhaustTimer>0) return;
    if(collide(player,e)){
-     stress=Math.min(3,stress+1); updateHUD();
+     addStress(1);
      e.x=rand(20,W-20); e.y=rand(70,H-30);
      if(e.kind.name==='通知') showMsg('ピコン！',700);
      else if(e.kind.name==='わたぼこり') showMsg('またおる…',700);
@@ -422,6 +462,16 @@ function drawPlayer(){
    // 元のぬいぐるみ寄りの、にこっとした口
    ctx.fillRect(-4,1,8,2);
    ctx.fillRect(-2,3,4,1);
+ }
+
+ if(exhaustTimer>0){
+   // へたりこみ：目を閉じて、疲労線
+   ctx.fillStyle='#111';
+   ctx.fillRect(-10,-4,7,2);
+   ctx.fillRect(3,-4,7,2);
+   ctx.fillRect(-4,3,8,2);
+   ctx.fillRect(15,-12,2,7);
+   ctx.fillRect(19,-8,2,5);
  }
  ctx.restore();
 }
