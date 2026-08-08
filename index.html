@@ -97,7 +97,7 @@ html,body,#wrap,#game,canvas,#controls,.pad,.btn,#attack,#msg,#tv,#tvbox{
     <div id="start">
       <div id="startCard">
         <h1>おかん、ちまちま。</h1>
-        <div style="font-weight:900">携帯で遊ぶ、どうでもいい系クソゲー v0.83</div>
+        <div style="font-weight:900">携帯で遊ぶ、どうでもいい系クソゲー v0.84</div>
         <p class="small">
           「おかん」を動かして、毎日のように増える<br>
           「ちまちま」した仕事を片付けよう。<br>
@@ -193,7 +193,7 @@ function resetFloor(){
  enemies=[]; bullets=[]; particles=[]; dustRespawns=[]; cleaned=0; stairOpen=false; stairs=null; tvItem=null;
  target=10+floor*2;
  player.x=W/2; player.y=H*.62; stress=Math.max(0,stress-1);
- for(let i=0;i<Math.min(target,6+floor);i++)spawnEnemy();
+ for(let i=0;i<Math.min(target, floor===1?7:(floor===2?9:10));i++)spawnEnemy();
  spawnTimer=0;
  updateHUD();
  showMsg(`${floor}F　ちまちま開始！`);
@@ -424,14 +424,18 @@ function update(dt){
 
    // 「倒すべき相手がいない時間」を作らない。
    // 基本は普通のちまちまを最低2個、終盤でも最低1個は必ず置く。
-   const wantedNormal = (target-cleaned<=2) ? 1 : 2;
+   // 2Fはテンポ重視。普通のちまちまを常時3個、
+   // 3Fは常時4個を目安にする。終盤だけ最低1個。
+   const baseWanted = floor===1 ? 2 : (floor===2 ? 3 : 4);
+   const wantedNormal = (target-cleaned<=2) ? 1 : baseWanted;
    if(countableEnemyCount() < wantedNormal){
      spawnEnemy(normalPool[(Math.random()*normalPool.length)|0]);
      spawnTimer=0;
    }else{
-     // 通常補充も以前より早め。
-     const interval = tvLock>0 ? 0.95 : 1.9;
-     const maxEnemies = tvLock>0 ? 12 : 8;
+     // 階が上がるほど補充も速くする。
+     const normalInterval = floor===1 ? 1.8 : (floor===2 ? 1.15 : 0.95);
+     const interval = tvLock>0 ? 0.75 : normalInterval;
+     const maxEnemies = tvLock>0 ? 13 : (floor===1 ? 8 : (floor===2 ? 10 : 11));
      if(spawnTimer>interval && enemies.length<maxEnemies){
        spawnTimer=0;
 
