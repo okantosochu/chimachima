@@ -59,6 +59,20 @@
  .up{left:45px}.down{left:45px}.left{top:45px}.right{top:45px}
  #attack{width:132px;flex-basis:132px;font-size:17px}
 }
+
+*{
+  -webkit-user-select:none !important;
+  user-select:none !important;
+  -webkit-touch-callout:none !important;
+  -webkit-tap-highlight-color:transparent !important;
+}
+html,body,#wrap,#game,canvas,#controls,.pad,.btn,#attack,#msg,#tv,#tvbox,#start,#startCard{
+  -webkit-user-select:none !important;
+  user-select:none !important;
+  -webkit-touch-callout:none !important;
+  touch-action:none !important;
+}
+
 </style>
 </head>
 <body>
@@ -76,7 +90,7 @@
     <div id="start">
       <div id="startCard">
         <h1>おかん、ちまちま。</h1>
-        <div style="font-weight:900">携帯で遊ぶ、どうでもいい系クソゲー v0.75</div>
+        <div style="font-weight:900">携帯で遊ぶ、どうでもいい系クソゲー v0.76</div>
         <p class="small">
           「おかん」を動かして、毎日のように増える<br>
           「ちまちま」した仕事を片付けよう。<br>
@@ -537,6 +551,19 @@ document.addEventListener('gesturestart', function(e){
 window.addEventListener('resize', function(){
   // Use the game's original resize routine.
   if(typeof resize === 'function') resize();
+});
+
+
+// スマホの長押しによる「コピー／検索／調べる／翻訳」メニューを出さない
+document.addEventListener('contextmenu', function(e){ e.preventDefault(); }, {passive:false});
+document.addEventListener('selectstart', function(e){ e.preventDefault(); }, {passive:false});
+document.addEventListener('dragstart', function(e){ e.preventDefault(); }, {passive:false});
+
+// 操作部分の長押しをブラウザ側の選択操作に渡さない
+document.querySelectorAll('.btn,#attack,canvas').forEach(function(el){
+  el.addEventListener('pointerdown', function(e){
+    if(e.pointerType === 'touch') e.preventDefault();
+  }, {passive:false});
 });
 
 </script>
